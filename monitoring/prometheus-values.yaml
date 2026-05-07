@@ -30,4 +30,3 @@ resource "helm_release" "kube_prometheus_stack" {
   ]
 }
 
-how to find this ff
