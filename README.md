@@ -1,236 +1,156 @@
-# observability
+**EKS Observability Platform (End-to-End DevOps Project)**
 
- Goal
+**An end-to-end cloud-native DevOps project that provisions AWS infrastructure, deploys Kubernetes monitoring & logging, and automates everything using CI/CD.**
 
-**Build a production-style Kubernetes monitoring & logging platform using:**
+The entire platform is deployed automatically on every Git push using GitHub Actions
+.
 
-Amazon EKS
-Terraform (Infra as Code)
-Helm (App deployment)
-Prometheus + Grafana
-Alertmanager (SNS + Email)
-CloudWatch Logs + Container Insights
-Sample microservice app
+**📌 Project Overview**
 
-At the end you’ll have:
-👉 Dashboards
-👉 Alerts
-👉 Logs
-👉 Demo screenshots
-👉 GitHub repo
+**This project demonstrates a production-style DevOps workflow using:
+**
+Infrastructure as Code with Terraform
+Kubernetes on Amazon Web Services (AWS)
+ EKS
+Monitoring with Prometheus & Grafana
+Alerting with Alertmanager + SNS/Email
+Centralized logging with CloudWatch
+Full CI/CD automation
 
-🏗️** High-Level Architecture**
-
-You will deploy:
-
-Terraform → AWS Infrastructure
+**🧠 Architecture**
+Developer Push → GitHub Actions → Terraform Apply
         ↓
-EKS Cluster + NodeGroup + IAM + SNS
+AWS Infrastructure (VPC + EKS)
         ↓
-Helm → kube-prometheus-stack
+Monitoring Stack (Prometheus + Grafana)
         ↓
-Sample microservices app
+Application Deployment & Metrics
         ↓
-Metrics + Logs + Alerts + Dashboards
-📦 What You Will Build
+Alerting & Notifications
+        ↓
+Centralized Logging
 
-**Phase 1 — Infrastructure (Terraform)**
+**🛠️ Tech Stack**
+Category	Tools
+Cloud	AWS (EKS, VPC, IAM, CloudWatch, SNS)
+IaC	Terraform
+Containers	Docker + Kubernetes
+Monitoring	Prometheus, Grafana, Alertmanager
+Logging	Fluent Bit + CloudWatch
+CI/CD	GitHub Actions
+Package Manager	Helm
 
-Create Terraform project:
+**📂 Repository Structure**
+eks-observability-project/
+│
+├── terraform/
+│   ├── 01-vpc.tf
+│   ├── 02-eks.tf
+│   ├── 03-helm-monitoring.tf
+│   ├── 04-k8s-manifests.tf
+│   ├── 05-alert-rules.tf
+│   ├── 06-logging.tf
+│   └── values.yaml
+│
+├── k8s/
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   └── servicemonitor.yaml
+│
+├── monitoring/
+│   └── alert-rules.yaml
+│
+└── .github/workflows/
+    └── pipeline.yml
+    
+**⚙️ CI/CD Pipeline**
 
-observability-eks/
- ├── terraform/
- ├── helm/
- ├── app/
- └── docs/
-Terraform will provision:
-VPC
-Subnets (public/private)
-Internet Gateway
-EKS Cluster
-Node Group
-IAM Roles (IRSA)
-SNS topic (alerts)
-CloudWatch Container Insights
-Deliverable:
+**Every push to the main branch triggers:
+**
+1️⃣ Terraform initializes providers
+2️⃣ Terraform plans infrastructure changes
+3️⃣ Terraform applies infrastructure & deployments
 
-👉 terraform apply creates full cluster
+**This automatically:**
 
-**Phase 2 — Deploy Monitoring Stack (Helm)**
+Creates VPC and networking
+Creates EKS cluster and node group
+Installs kube-prometheus-stack via Helm
+Deploys Kubernetes application + ServiceMonitor
+Applies Prometheus alert rules
+Installs Fluent Bit for logging
 
-**Install kube-prometheus-stack:**
+No manual commands required.
 
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+**🧱 Phase Breakdown**
+**Phase 1 — Infrastructure
+**
+Provisioned using Terraform:
 
-helm install monitoring prometheus-community/kube-prometheus-stack \
-  --namespace monitoring \
-  --create-namespace
+VPC + Public Subnets (Free-tier friendly)
+IAM roles & security groups
+Amazon EKS cluster + node group
+**Phase 2 — Monitoring Stack**
 
-**This deploys automatically:**
+Installed via Helm using Terraform:
 
-Prometheus Operator
-Prometheus Server
+Prometheus
 Grafana
 Alertmanager
 node-exporter
 kube-state-metrics
-
-**Verify:**
-
-kubectl get pods -n monitoring
-
-**Phase 3 — Enable AWS Observability**
-
-Enable CloudWatch Container Insights
-aws eks update-cluster-config \
-  --region us-east-1 \
-  --name observability-eks \
-  --logging '{"clusterLogging":[{"types":["api","audit","authenticator","controllerManager","scheduler"],"enabled":true}]}'
-
-Deploy CloudWatch agent (Helm or manifest).
-
-**Now you get:**
-
-Node metrics
-Pod logs
-Cluster metrics in CloudWatch
-
-**Phase 4 — Deploy Sample Microservices App**
-
-Deploy a demo app to generate traffic.
-
-**Use:**
-
-Frontend (nginx)
-Backend (Python Flask API)
-
-Create Kubernetes manifests:
-
-app/
- ├── frontend-deployment.yaml
- ├── backend-deployment.yaml
- ├── service.yaml
-
-Expose via LoadBalancer.
-
-Generate traffic:
-
-kubectl run load-generator --image=busybox -it -- /bin/sh
-while true; do wget -q -O- http://frontend; done
-
-Now metrics start flowing 📈
-
-**Phase 5 — Configure Prometheus Scraping**
-
-Create ServiceMonitor:
-
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
-metadata:
-  name: backend-monitor
-  namespace: monitoring
-spec:
-  selector:
-    matchLabels:
-      app: backend
-  endpoints:
-  - port: http
-    path: /metrics
-
-Now Prometheus scrapes your app automatically.
-
-**Phase 6 — Build Grafana Dashboards**
-
-Create dashboards for:
-
-**Dashboard 1 — Kubernetes Cluster**
-      Node CPU & Memory
-      Pod restarts
-      Network usage
-**Dashboard 2 — Application Metrics**
-    Request rate
-    Error rate
-    Latency
-**Dashboard 3 — AWS Metrics**
-ALB requests
-Node group scaling
-CPU utilization
-
-
-**Phase 7 — Configure Alerts 🚨**
-
-Create alert rules:
-
-High CPU alert
-- alert: HighPodCPU
-  expr: sum(rate(container_cpu_usage_seconds_total[5m])) > 0.8
-  for: 2m
-
-Connect Alertmanager → SNS → Email.
-
-Test alert:
-
-kubectl run stress --image=progrium/stress -- stress --cpu 2
-
-You should receive an email alert 🎉
-
-**Phase 8 — Security (IRSA + RBAC)**
-
-Create IAM role for Prometheus:
-
-Read CloudWatch metrics
-Secure service accounts
-
-Add Kubernetes RBAC roles.
-
-**Runtime & orchestration**
-
-Kubernetes 1.27+ cluster (EKS, GKE, AKS, or self-managed via kubeadm)
-kubectl configured with kubeconfig access to target clusters
-Helm 3.x for deploying monitoring stack charts
+**Phase 3 Application Monitoring
 **
-Metrics & monitoring backend**
+Deployed demo Kubernetes app:
 
-Prometheus (kube-prometheus-stack chart is the standard) — scrapes metrics from nodes, pods, and the API server
-metrics-server — required for live CPU/memory data in kubectl top and the HPA
-Node Exporter — DaemonSet that exposes per-node hardware metrics
-kube-state-metrics — exposes Kubernetes object state (pod status, restart counts, etc.)
-Grafana (optional if you're building a custom UI) — or replace with your own frontend consuming the Prometheus HTTP API
+Deployment + Service
+Prometheus ServiceMonitor
+Grafana dashboards
+**Phase 4 — Alerting**
 
-**Logging backend**
+Configured:
 
-Fluent Bit or Fluentd — DaemonSet log collector that tails container logs and ships them
-Loki (Grafana's log aggregation system) or Elasticsearch — log storage and query layer
-If using Elasticsearch: Kibana for log search, Logstash or Filebeat as the shipper
+Prometheus alert rules
+Alertmanager notifications (SNS / Email)
+**Phase 5 — Logging**
 
-**Alerting**
+Installed:
 
-Alertmanager — ships with kube-prometheus-stack, routes alerts to PagerDuty / Slack / email
-PrometheusRule CRDs — define your alert conditions (OOMKill rate, restart loops, node pressure)
+Fluent Bit DaemonSet
+AWS CloudWatch Container Insights
+🚀 How to Run Locally (Optional)
 
-**Frontend / API layer (to replace the mock data in the dashboard)**
+**Prerequisites**
 
-A backend API (Node.js/Go/Python) that queries Prometheus HTTP API and the Kubernetes API server
-Kubernetes API server access — either in-cluster via a ServiceAccount, or external via kubeconfig
-WebSocket or SSE endpoint for streaming live logs to the UI
-CORS and auth layer (OIDC/RBAC) if the dashboard is externally exposed
+Install:
 
-**RBAC & security**
+Terraform
+AWS CLI
+kubectl
+Helm
 
-ServiceAccount with ClusterRole permissions to get/list/watch pods, nodes, events, and namespaces
-RBAC RoleBindings scoped appropriately per namespace if multi-tenant
-NetworkPolicies if you want to restrict metric scrape paths
+**Configure AWS credentials:**
 
-**Development dependencies (local)**
+**aws configure
+**
+Run Terraform:
 
-Node.js 18+ and npm/pnpm (if building the React/JS frontend)
-Docker Desktop or a local cluster tool like kind or minikube for dev testing
-k9s (optional but highly recommended) — terminal UI for sanity-checking your cluster alongside the dashboard
+cd terraform
+terraform init
+terraform plan
+terraform apply
+🔐 GitHub Secrets Required
 
-**Infrastructure**
+Add in repository settings:
 
-Persistent storage (PVC) for Prometheus TSDB and Loki/Elasticsearch indices — at minimum 50GB for a modest cluster
-Load balancer or Ingress controller (ingress-nginx or AWS ALB) to expose the dashboard externally
-TLS certificate (cert-manager + Let's Encrypt or your internal CA)
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+AWS_REGION
+🎯 What This Project Demonstrates
 
-The fastest path to a working stack is helm install kube-prometheus-stack (covers Prometheus + Grafana + Alertmanager + Node Exporter + kube-state-metrics in one shot) paired with helm install loki-stack for logging, then wire your custom frontend to their HTTP APIs.
+✔ Infrastructure as Code
+✔ Kubernetes operations
+✔ Observability (metrics + logs + alerts)
+✔ CI/CD automation
+✔ GitOps workflow
+✔ Production-style cloud architecture
